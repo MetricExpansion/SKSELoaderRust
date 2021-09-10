@@ -40,7 +40,7 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
         }
         Err(error) => {
             quick_msg_box("Error when finding it!");
-            error!("Error occured during search: {}", error);
+            error!("Error occurred during search: {}", error);
         }
     }
 }
