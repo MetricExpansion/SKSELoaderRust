@@ -21,15 +21,15 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     let addr = unsafe { get_iat_addr(GetModuleHandleA(null()), "VCRUNTIME140.dll", "__telemetry_main_invoke_trigger") };
     match addr {
         Ok(Some(addr)) => {
-            // addr is (i think) a pointer to a function pointer...
             quick_msg_box(&format!("Found __telemetry_main_invoke_trigger at {:?}!", addr));
             info!("Found it at {:?}", addr);
             unsafe {
-                let addr = std::mem::transmute::<*mut _, *mut Option<extern fn(*mut c_void)>>(addr);
+                let addr = std::mem::transmute::<*mut _, *mut TelemFn>(addr);
                 __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
+                let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
                 write_protected_buffer(
                     addr as *mut c_void,
-                    std::mem::transmute::<unsafe extern fn(*mut c_void), *const c_void>(__telemetry_main_invoke_trigger_replacement),
+                    std::mem::transmute::<_, *const c_void>(&new_addr as *const TelemFn),
                     std::mem::size_of::<*const c_void>());
             }
             quick_msg_box(&format!("Patched __telemetry_main_invoke_trigger!"));
@@ -45,9 +45,11 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     }
 }
 
-static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: Option<extern fn(*mut c_void)> = None;
+type TelemFn = Option<unsafe extern "win64" fn(*mut c_void)>;
 
-pub unsafe extern fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
+static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = None;
+
+pub unsafe extern "win64" fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
     quick_msg_box("__telemetry_main_invoke_trigger intercepted!");
     __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL.unwrap()(args);
 }
@@ -113,5 +115,4 @@ unsafe fn write_protected_buffer(addr: *mut c_void, data: *const c_void, length:
     VirtualProtect(addr, length, PAGE_EXECUTE_READWRITE, (&mut old_protect) as _);
     copy_nonoverlapping(data, addr, length);
     VirtualProtect(addr, length, old_protect, (&mut old_protect) as _);
-
 }
