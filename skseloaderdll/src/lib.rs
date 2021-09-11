@@ -1,5 +1,3 @@
-// Ref: https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html
-
 use detour::RawDetour;
 use std::error::Error;
 use std::ffi::{c_void, CStr, CString};
@@ -133,6 +131,7 @@ fn hook_thread_info() {
 }
 
 // DLL entry point
+// Ref: https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
