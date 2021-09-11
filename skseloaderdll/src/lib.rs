@@ -11,6 +11,8 @@ use std::ptr::{null, null_mut};
 use winapi::um::winuser::{MessageBoxA, MB_OK};
 use winapi::um::memoryapi::VirtualProtect;
 use std::intrinsics::copy_nonoverlapping;
+use winapi::um::processthreadsapi::ExitProcess;
+
 
 fn main(_base: winapi::shared::minwindef::LPVOID) {
     simple_logger::SimpleLogger::new().init().unwrap();
@@ -21,18 +23,23 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     let addr = unsafe { get_iat_addr(GetModuleHandleA(null()), "VCRUNTIME140.dll", "__telemetry_main_invoke_trigger") };
     match addr {
         Ok(Some(addr)) => {
-            quick_msg_box(&format!("Found __telemetry_main_invoke_trigger at {:?}!", addr));
             info!("Found it at {:?}", addr);
             unsafe {
                 let addr = std::mem::transmute::<*mut _, *mut TelemFn>(addr);
                 __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
-                let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
+                quick_msg_box(&format!("Found __telemetry_main_invoke_trigger at {:?}!", __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL as *const c_void));
+
+                let faddr = *addr;
+                faddr(null_mut());
+
+                let new_addr: TelemFn = __telemetry_main_invoke_trigger_replacement;
                 write_protected_buffer(
                     addr as *mut c_void,
-                    std::mem::transmute::<_, *const c_void>(&new_addr as *const TelemFn),
+                    std::mem::transmute::<*const _, *const c_void>(&new_addr as *const TelemFn),
                     std::mem::size_of::<*const c_void>());
             }
-            quick_msg_box(&format!("Patched __telemetry_main_invoke_trigger!"));
+            // let addr_new = unsafe { get_iat_addr(GetModuleHandleA(null()), "VCRUNTIME140.dll", "__telemetry_main_invoke_trigger") }.unwrap().unwrap() as *const TelemFn;
+            // quick_msg_box(&format!("Patched __telemetry_main_invoke_trigger to {:?}! New address is {:?}", __telemetry_main_invoke_trigger_replacement as *const c_void, unsafe { *addr_new }));
         }
         Ok(None) => {
             quick_msg_box("Did not find it!");
@@ -45,13 +52,16 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     }
 }
 
-type TelemFn = Option<unsafe extern "win64" fn(*mut c_void)>;
+type TelemFn = unsafe extern "cdecl" fn(*mut c_void);
 
-static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = None;
+static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = dummy;
 
-pub unsafe extern "win64" fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
+pub unsafe extern "cdecl" fn dummy(_: *mut c_void) {
+}
+
+pub unsafe extern "cdecl" fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
     quick_msg_box("__telemetry_main_invoke_trigger intercepted!");
-    __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL.unwrap()(args);
+    __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL(args);
 }
 
 
@@ -85,7 +95,7 @@ unsafe fn get_iat_addr(module: HMODULE, search_dll_name: &str, search_import_nam
         trace!("DLL name: {:?}", dll_name);
         if search_dll_name.as_c_str() == dll_name {
             let mut thunk_data = (base + *(*import_table).u.OriginalFirstThunk() as usize) as *const IMAGE_THUNK_DATA;
-            let mut iat = base + (*import_table).FirstThunk as usize;
+            let mut iat = (base + (*import_table).FirstThunk as usize) as *const usize;
             while *((*thunk_data).u1.Ordinal()) != 0 {
                 if !IMAGE_SNAP_BY_ORDINAL(*(*thunk_data).u1.Ordinal()) {
                     let import_info = (base + (*(*thunk_data).u1.AddressOfData() as usize)) as *const IMAGE_IMPORT_BY_NAME;
@@ -96,7 +106,7 @@ unsafe fn get_iat_addr(module: HMODULE, search_dll_name: &str, search_import_nam
                     }
                 }
                 thunk_data = thunk_data.add(1);
-                iat += 1;
+                iat = iat.add(1);
             }
         }
         import_table = import_table.add(1);
