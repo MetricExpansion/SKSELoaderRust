@@ -1,5 +1,5 @@
-use winapi::um::processthreadsapi::ExitProcess;
 use helpers::quick_msg_box;
+use winapi::um::processthreadsapi::ExitProcess;
 
 mod antidebugger;
 mod helpers;

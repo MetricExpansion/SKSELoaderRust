@@ -5,7 +5,9 @@
 
 use std::ffi::CString;
 
+use atomic::Atomic;
 use detour::RawDetour;
+use std::sync::atomic::Ordering;
 use widestring::WideCString;
 use winapi::shared::minwindef::{BOOL, TRUE};
 use winapi::shared::ntdef::ULONG;
@@ -14,7 +16,7 @@ use winapi::um::winnt::{HANDLE, PVOID};
 
 type ThreadInfoFn = unsafe extern "stdcall" fn(HANDLE, ULONG, PVOID, ULONG) -> BOOL;
 
-static mut ZW_SET_INFORMATION_THREAD_ORIGINAL: Option<ThreadInfoFn> = None;
+static ZW_SET_INFORMATION_THREAD_ORIGINAL: Atomic<Option<ThreadInfoFn>> = Atomic::new(None);
 
 /// Our replacement for `ZwSetInformationThread` that will filter out calls that set the anti-debug flag.
 unsafe extern "stdcall" fn zw_set_information_thread_detour(
@@ -29,6 +31,7 @@ unsafe extern "stdcall" fn zw_set_information_thread_detour(
     }
     // Use the trampoline to call the original function.
     return ZW_SET_INFORMATION_THREAD_ORIGINAL
+        .load(Ordering::SeqCst)
         .expect("ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL was None! Exiting...")(
         thread_handle,
         thread_information_class,
@@ -59,7 +62,8 @@ pub fn hook_thread_info() {
         .expect("Failed to get hook ZwSetInformationThread! Terminating!");
         // Detours will create a trampoline that we can use to call the original function. We save
         // the address of the trampoline to a global so that we can use it in our detour function.
-        ZW_SET_INFORMATION_THREAD_ORIGINAL = std::mem::transmute(h.trampoline());
+        ZW_SET_INFORMATION_THREAD_ORIGINAL
+            .store(std::mem::transmute(h.trampoline()), Ordering::SeqCst);
         h.enable()
             .expect("Failed to enable trampoline! Terminating!");
         std::mem::forget(h);
