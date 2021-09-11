@@ -9,7 +9,7 @@ use std::ptr::{null, null_mut};
 use structopt::StructOpt;
 use widestring::WideCString;
 use winapi::{
-    shared::minwindef::{BOOL, FALSE},
+    shared::minwindef::FALSE,
     shared::winerror::WAIT_TIMEOUT,
     um::handleapi::CloseHandle,
     um::libloaderapi::{GetModuleHandleA, GetProcAddress},
