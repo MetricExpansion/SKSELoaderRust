@@ -326,8 +326,6 @@ name = "skseloaderdll"
 version = "0.1.0"
 dependencies = [
  "detour",
- "log",
- "simple_logger",
  "widestring",
  "winapi 0.3.9",
 ]

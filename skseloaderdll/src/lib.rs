@@ -1,14 +1,13 @@
 // Ref: https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html
 
 use detour::RawDetour;
-use log::*;
 use std::error::Error;
 use std::ffi::{c_void, CStr, CString};
 use std::intrinsics::copy_nonoverlapping;
 use std::os::raw::c_char;
 use std::ptr::{null, null_mut};
 use widestring::WideCString;
-use winapi::shared::minwindef::{BOOL, FALSE, HMODULE, TRUE};
+use winapi::shared::minwindef::{BOOL, HMODULE, TRUE};
 use winapi::shared::ntdef::ULONG;
 use winapi::um::libloaderapi::{GetModuleHandleA, GetModuleHandleW, GetProcAddress, LoadLibraryW};
 use winapi::um::memoryapi::VirtualProtect;
@@ -21,47 +20,42 @@ use winapi::um::winnt::{
 use winapi::um::winuser::{MessageBoxA, MB_OK};
 
 fn main(_base: winapi::shared::minwindef::LPVOID) {
-    simple_logger::SimpleLogger::new().init().unwrap();
     // quick_msg_box("Hello from Rust!");
+    std::panic::set_hook(Box::new(|info| {
+        match info.payload().downcast_ref::<&str>() {
+            Some(message) => quick_msg_box(&format!("PANIC!: {}", message)),
+            None => quick_msg_box(&format!("PANIC! Unknown reason.")),
+        }
+        unsafe {
+            ExitProcess(42);
+        }
+    }));
     hook_thread_info();
     hook_skse_loader();
+    quick_msg_box("Load complete!");
 }
 
 // SKSE loading
 
 fn hook_skse_loader() {
-    info!("Searching for __telemetry_main_invoke_trigger in VCRUNTIME140.dll");
     let addr = unsafe {
         get_iat_addr(
             GetModuleHandleA(null()),
             "VCRUNTIME140.dll",
             "__telemetry_main_invoke_trigger",
         )
+        .expect("Error {} when finding __telemetry_main_invoke_trigger! Terminating!")
+        .expect("Did not find __telemetry_main_invoke_trigger! Terminating!")
     };
-    match addr {
-        Ok(Some(addr)) => {
-            info!("Found it at {:?}", addr);
-            unsafe {
-                let addr = std::mem::transmute::<*mut _, *mut TelemFn>(addr);
-                __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
-                let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
-                write_protected_buffer(
-                    addr as *mut c_void,
-                    std::mem::transmute::<*const _, *const c_void>(&new_addr as *const TelemFn),
-                    std::mem::size_of::<*const c_void>(),
-                );
-            }
-            // let addr_new = unsafe { get_iat_addr(GetModuleHandleA(null()), "VCRUNTIME140.dll", "__telemetry_main_invoke_trigger") }.unwrap().unwrap() as *const TelemFn;
-            // quick_msg_box(&format!("Patched __telemetry_main_invoke_trigger to {:?}! New address is {:?}", __telemetry_main_invoke_trigger_replacement as *const (), unsafe { *addr_new }));
-        }
-        Ok(None) => {
-            quick_msg_box("Did not find it!");
-            error!("Did not find it!");
-        }
-        Err(error) => {
-            quick_msg_box("Error when finding it!");
-            error!("Error occurred during search: {}", error);
-        }
+    unsafe {
+        let addr: *mut TelemFn = std::mem::transmute::<*mut _, _>(addr);
+        __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
+        let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
+        write_protected_buffer(
+            addr as *mut c_void,
+            std::mem::transmute::<*const _, *const c_void>(&new_addr as *const TelemFn),
+            std::mem::size_of::<*const c_void>(),
+        );
     }
 }
 
@@ -71,15 +65,9 @@ static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = None;
 static mut SKSE_LOADED: bool = false;
 
 pub unsafe extern "cdecl" fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
-    let func = if let Some(func) = __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL {
-        func
-    } else {
-        quick_msg_box("__TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL was None! Exiting...");
-        ExitProcess(42);
-        return;
-    };
     load_skse();
-    func(args);
+    __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL
+        .expect("__TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL was None! Exiting...")(args);
 }
 
 unsafe fn load_skse() {
@@ -91,8 +79,7 @@ unsafe fn load_skse() {
     let skse_dll_path = WideCString::from_str("skse64_1_5_73.dll").unwrap();
     let result = LoadLibraryW(skse_dll_path.as_ptr());
     if result.is_null() {
-        quick_msg_box("Failed to load SKSE! Terminating!");
-        ExitProcess(42);
+        panic!("Failed to load SKSE! Terminating!");
     }
     SKSE_LOADED = true;
 }
@@ -108,18 +95,12 @@ pub unsafe extern "stdcall" fn zw_set_information_thread_detour(
     thread_information: PVOID,
     thread_information_length: ULONG,
 ) -> BOOL {
-    let func = if let Some(func) = ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL {
-        func
-    } else {
-        quick_msg_box("ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL was None! Exiting...");
-        ExitProcess(42);
-        return FALSE;
-    };
     // This prevents the debugger protection from happening.
     if thread_information_class == 0x11 {
         return TRUE;
     }
-    return func(
+    return ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL
+        .expect("ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL was None! Exiting...")(
         thread_handle,
         thread_information_class,
         thread_information,
@@ -132,32 +113,20 @@ fn hook_thread_info() {
         let mod_name = WideCString::from_str("ntdll.dll").unwrap();
         let fn_name = CString::new("ZwSetInformationThread").unwrap();
         let addr = GetProcAddress(GetModuleHandleW(mod_name.as_ptr()), fn_name.as_ptr());
-        Some(std::mem::transmute::<_, ThreadInfoFn>(addr))
-    };
-    let addr = if let Some(addr) = addr {
-        addr
-    } else {
-        quick_msg_box("Failed to get address of ZwSetInformationThread! Terminating!");
-        unsafe { ExitProcess(42) };
-        return;
+        if addr.is_null() {
+            panic!("Failed to get address of ZwSetInformationThread! Terminating!")
+        }
+        std::mem::transmute::<_, ThreadInfoFn>(addr)
     };
     unsafe {
-        let h = if let Ok(h) = RawDetour::new(
+        let h = RawDetour::new(
             addr as *const (),
             zw_set_information_thread_detour as *const (),
-        ) {
-            h
-        } else {
-            quick_msg_box("Failed to get hook ZwSetInformationThread! Terminating!");
-            ExitProcess(42);
-            return;
-        };
+        )
+        .expect("Failed to get hook ZwSetInformationThread! Terminating!");
         ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL = std::mem::transmute(h.trampoline());
-        let enabled = h.enable();
-        if let Err(_) = enabled {
-            quick_msg_box("Failed to enable trampoline! Terminating!");
-            ExitProcess(42);
-        }
+        h.enable()
+            .expect("Failed to enable trampoline! Terminating!");
         std::mem::forget(h);
     }
 }
@@ -189,7 +158,7 @@ unsafe fn get_iat_addr(
     module: HMODULE,
     search_dll_name: &str,
     search_import_name: &str,
-) -> Result<Option<*mut c_void>, Box<dyn Error>> {
+) -> Result<Option<*mut ()>, Box<dyn Error>> {
     let search_import_name = CString::new(search_import_name)?;
     let search_dll_name = CString::new(search_dll_name)?;
     let base = module as usize;
@@ -200,7 +169,6 @@ unsafe fn get_iat_addr(
             .VirtualAddress as usize) as *const IMAGE_IMPORT_DESCRIPTOR;
     while *(*import_table).u.Characteristics() != 0 {
         let dll_name = CStr::from_ptr((base + ((*import_table).Name) as usize) as *const c_char);
-        trace!("DLL name: {:?}", dll_name);
         if search_dll_name.as_c_str() == dll_name {
             let mut thunk_data = (base + *(*import_table).u.OriginalFirstThunk() as usize)
                 as *const IMAGE_THUNK_DATA;
@@ -210,9 +178,8 @@ unsafe fn get_iat_addr(
                     let import_info = (base + (*(*thunk_data).u1.AddressOfData() as usize))
                         as *const IMAGE_IMPORT_BY_NAME;
                     let name = CStr::from_ptr((*import_info).Name.as_ptr());
-                    trace!("Function {:?} in DLL {:?}", name, dll_name);
                     if search_import_name.as_c_str() == name {
-                        return Ok(Some(iat as *mut c_void));
+                        return Ok(Some(iat as *mut ()));
                     }
                 }
                 thunk_data = thunk_data.add(1);
