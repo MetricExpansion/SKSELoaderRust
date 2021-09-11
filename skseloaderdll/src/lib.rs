@@ -5,17 +5,24 @@ use std::intrinsics::copy_nonoverlapping;
 use std::os::raw::c_char;
 use std::ptr::{null, null_mut};
 use widestring::WideCString;
-use winapi::shared::minwindef::{BOOL, HMODULE, TRUE};
-use winapi::shared::ntdef::ULONG;
-use winapi::um::libloaderapi::{GetModuleHandleA, GetModuleHandleW, GetProcAddress, LoadLibraryW};
-use winapi::um::memoryapi::VirtualProtect;
-use winapi::um::processthreadsapi::ExitProcess;
-use winapi::um::winnt::{
-    HANDLE, IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DOS_HEADER, IMAGE_IMPORT_BY_NAME,
-    IMAGE_IMPORT_DESCRIPTOR, IMAGE_NT_HEADERS, IMAGE_SNAP_BY_ORDINAL, IMAGE_THUNK_DATA,
-    PAGE_EXECUTE_READWRITE, PVOID,
+use winapi::{
+    shared::minwindef::{BOOL, HMODULE, TRUE},
+    shared::ntdef::ULONG,
+    um::libloaderapi::{GetModuleHandleA, GetModuleHandleW, GetProcAddress, LoadLibraryW},
+    um::memoryapi::VirtualProtect,
+    um::processthreadsapi::ExitProcess,
+    um::winnt::HANDLE,
+    um::winnt::IMAGE_DIRECTORY_ENTRY_IMPORT,
+    um::winnt::IMAGE_DOS_HEADER,
+    um::winnt::IMAGE_IMPORT_BY_NAME,
+    um::winnt::IMAGE_IMPORT_DESCRIPTOR,
+    um::winnt::IMAGE_NT_HEADERS,
+    um::winnt::IMAGE_SNAP_BY_ORDINAL,
+    um::winnt::IMAGE_THUNK_DATA,
+    um::winnt::PAGE_EXECUTE_READWRITE,
+    um::winnt::PVOID,
+    um::winuser::{MessageBoxA, MB_OK},
 };
-use winapi::um::winuser::{MessageBoxA, MB_OK};
 
 fn main(_base: winapi::shared::minwindef::LPVOID) {
     // quick_msg_box("Hello from Rust!");

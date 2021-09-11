@@ -8,22 +8,23 @@ use std::path::PathBuf;
 use std::ptr::{null, null_mut};
 use structopt::StructOpt;
 use widestring::WideCString;
-#[allow(unused_imports)]
-use winapi::shared::minwindef::{BOOL, FALSE};
-use winapi::shared::winerror::WAIT_TIMEOUT;
-use winapi::um::handleapi::CloseHandle;
-use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
-use winapi::um::memoryapi::{VirtualAllocEx, WriteProcessMemory};
-use winapi::um::minwinbase::LPTHREAD_START_ROUTINE;
-use winapi::um::processthreadsapi::{
-    CreateProcessW, CreateRemoteThread, OpenProcess, ResumeThread, PROCESS_INFORMATION,
-    STARTUPINFOW,
-};
-use winapi::um::synchapi::WaitForSingleObject;
-use winapi::um::winbase::{CREATE_SUSPENDED, INFINITE, WAIT_ABANDONED, WAIT_OBJECT_0};
-use winapi::um::winnt::{
-    HANDLE, MEM_COMMIT, PAGE_EXECUTE_READWRITE, PROCESS_CREATE_THREAD, PROCESS_QUERY_INFORMATION,
-    PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
+use winapi::{
+    shared::minwindef::{BOOL, FALSE},
+    shared::winerror::WAIT_TIMEOUT,
+    um::handleapi::CloseHandle,
+    um::libloaderapi::{GetModuleHandleA, GetProcAddress},
+    um::memoryapi::{VirtualAllocEx, WriteProcessMemory},
+    um::minwinbase::LPTHREAD_START_ROUTINE,
+    um::processthreadsapi::{
+        CreateProcessW, CreateRemoteThread, OpenProcess, ResumeThread, PROCESS_INFORMATION,
+        STARTUPINFOW,
+    },
+    um::synchapi::WaitForSingleObject,
+    um::winbase::{CREATE_SUSPENDED, INFINITE, WAIT_ABANDONED, WAIT_OBJECT_0},
+    um::winnt::{
+        HANDLE, MEM_COMMIT, PAGE_EXECUTE_READWRITE, PROCESS_CREATE_THREAD,
+        PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
+    },
 };
 
 #[derive(Debug, StructOpt)]
