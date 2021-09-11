@@ -243,6 +243,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "simple_logger",
+ "widestring",
  "winapi",
 ]
 

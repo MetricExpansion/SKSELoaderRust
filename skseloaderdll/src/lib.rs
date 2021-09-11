@@ -6,12 +6,13 @@ use std::ffi::{c_void, CStr, CString};
 use winapi::shared::minwindef::{HMODULE};
 use std::error::Error;
 use std::os::raw::c_char;
-use winapi::um::libloaderapi::GetModuleHandleA;
+use winapi::um::libloaderapi::{GetModuleHandleA, LoadLibraryW};
 use std::ptr::{null, null_mut};
 use winapi::um::winuser::{MessageBoxA, MB_OK};
 use winapi::um::memoryapi::VirtualProtect;
 use std::intrinsics::copy_nonoverlapping;
 use winapi::um::processthreadsapi::ExitProcess;
+use widestring::WideCString;
 
 
 fn main(_base: winapi::shared::minwindef::LPVOID) {
@@ -27,12 +28,8 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
             unsafe {
                 let addr = std::mem::transmute::<*mut _, *mut TelemFn>(addr);
                 __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
-                quick_msg_box(&format!("Found __telemetry_main_invoke_trigger at {:?}!", __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL as *const c_void));
-
-                let faddr = *addr;
-                faddr(null_mut());
-
-                let new_addr: TelemFn = __telemetry_main_invoke_trigger_replacement;
+                quick_msg_box(&format!("Found __telemetry_main_invoke_trigger at {:?}!", __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL.unwrap() as *const c_void));
+                let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
                 write_protected_buffer(
                     addr as *mut c_void,
                     std::mem::transmute::<*const _, *const c_void>(&new_addr as *const TelemFn),
@@ -52,18 +49,37 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     }
 }
 
-type TelemFn = unsafe extern "cdecl" fn(*mut c_void);
+type TelemFn = Option<unsafe extern "cdecl" fn(*mut c_void)>;
 
-static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = dummy;
-
-pub unsafe extern "cdecl" fn dummy(_: *mut c_void) {
-}
+static mut __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL: TelemFn = None;
+static mut SKSE_LOADED: bool = false;
 
 pub unsafe extern "cdecl" fn __telemetry_main_invoke_trigger_replacement(args: *mut c_void) {
     quick_msg_box("__telemetry_main_invoke_trigger intercepted!");
-    __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL(args);
+    let func = if let Some(func) = __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL { func } else {
+        quick_msg_box("__TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL was None! Exiting...");
+        ExitProcess(42);
+        return;
+    };
+    load_skse();
+    func(args);
 }
 
+unsafe fn load_skse() {
+    // Add custom logic here...
+    if SKSE_LOADED {
+        return;
+    }
+    let skse_dll_path = WideCString::from_str("skse64_1_5_73.dll").unwrap();
+    let result = LoadLibraryW(skse_dll_path.as_ptr());
+    if result.is_null() {
+        quick_msg_box("Failed to load SKSE! Terminating!");
+    } else {
+        quick_msg_box("Loaded SKSE!");
+    }
+    SKSE_LOADED = true;
+
+}
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
