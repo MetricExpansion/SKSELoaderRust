@@ -29,7 +29,7 @@ pub fn hook_skse_loader() {
         __TELEMETRY_MAIN_INVOKE_TRIGGER_ORIGINAL = *addr;
         // Now write the address of our replacement to the IAT.
         let new_addr: TelemFn = Some(__telemetry_main_invoke_trigger_replacement);
-        crate::helpers::write_protected_buffer(
+        write_protected_buffer(
             addr as *mut c_void,
             std::mem::transmute::<*const _, *const c_void>(&new_addr as *const TelemFn),
             std::mem::size_of::<*const c_void>(),
