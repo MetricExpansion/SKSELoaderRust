@@ -21,6 +21,7 @@ use winapi::um::winuser::{MessageBoxA, MB_OK};
 
 fn main(_base: winapi::shared::minwindef::LPVOID) {
     // quick_msg_box("Hello from Rust!");
+    // Register a panic handler to kill the game if we have any issues.
     std::panic::set_hook(Box::new(|info| {
         match info.payload().downcast_ref::<&str>() {
             Some(message) => quick_msg_box(&format!("PANIC!: {}", message)),
@@ -32,7 +33,7 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
     }));
     hook_thread_info();
     hook_skse_loader();
-    quick_msg_box("Load complete!");
+    // quick_msg_box("Load complete!");
 }
 
 // SKSE loading
