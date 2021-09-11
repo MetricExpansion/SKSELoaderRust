@@ -1,4 +1,4 @@
-use byte_strings::c_str;
+use byte_strings::c_str as c;
 use log::*;
 #[allow(unused_imports)]
 use std::ffi::CString;
@@ -7,12 +7,13 @@ use std::path::PathBuf;
 #[allow(unused_imports)]
 use std::ptr::{null, null_mut};
 use structopt::StructOpt;
+use wide_literals::w;
 use widestring::WideCString;
 use winapi::{
     shared::minwindef::FALSE,
     shared::winerror::WAIT_TIMEOUT,
     um::handleapi::CloseHandle,
-    um::libloaderapi::{GetModuleHandleA, GetProcAddress},
+    um::libloaderapi::{GetModuleHandleW, GetProcAddress},
     um::memoryapi::{VirtualAllocEx, WriteProcessMemory},
     um::minwinbase::LPTHREAD_START_ROUTINE,
     um::processthreadsapi::{
@@ -133,8 +134,8 @@ fn main() {
     info!("Getting address of LoadLibraryA.");
     let lla_addr = unsafe {
         GetProcAddress(
-            GetModuleHandleA(c_str!("kernel32.dll").as_ptr()),
-            c_str!("LoadLibraryA").as_ptr(),
+            GetModuleHandleW(w!("kernel32.dll")),
+            c!("LoadLibraryA").as_ptr(),
         ) as usize
     };
     if lla_addr == 0 {

@@ -13,3 +13,4 @@ winapi = { version = "0.3.9", features = ["std", "impl-default", "winuser", "pro
 widestring = "0.4.3"
 detour = { version = "0.8.0", default-features = false }
 atomic = "0.5.0"
+wide-literals = "0.2.0"

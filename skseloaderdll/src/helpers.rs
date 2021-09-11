@@ -6,13 +6,15 @@ use std::intrinsics::copy_nonoverlapping;
 use std::os::raw::c_char;
 use std::ptr::null_mut;
 
+use widestring::WideCString;
 use winapi::shared::minwindef::HMODULE;
 use winapi::um::memoryapi::VirtualProtect;
 use winapi::um::winnt::{
     IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DOS_HEADER, IMAGE_IMPORT_BY_NAME, IMAGE_IMPORT_DESCRIPTOR,
     IMAGE_NT_HEADERS, IMAGE_SNAP_BY_ORDINAL, IMAGE_THUNK_DATA, PAGE_EXECUTE_READWRITE,
 };
-use winapi::um::winuser::{MessageBoxA, MB_OK};
+use winapi::um::winuser::{MessageBoxW, MB_OK};
+use wide_literals::w;
 
 /// Searches the IAT for imported functions in a specified DLL.
 pub unsafe fn get_iat_addr(
@@ -60,10 +62,10 @@ pub unsafe fn get_iat_addr(
 
 /// A helper function to quickly show a message box. Panics if `msg` cannot be converted to a [CString].
 pub fn quick_msg_box(msg: &str) {
-    let message = CString::new(msg).unwrap();
-    let title = CString::new("Message from Rust").unwrap();
+    let message = WideCString::from_str(msg).unwrap_or_default();
+    let title = w!("Message from Rust");
     unsafe {
-        MessageBoxA(null_mut(), message.as_ptr(), title.as_ptr(), MB_OK);
+        MessageBoxW(null_mut(), message.as_ptr(), title, MB_OK);
     }
 }
 

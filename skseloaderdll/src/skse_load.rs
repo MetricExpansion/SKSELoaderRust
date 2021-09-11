@@ -7,8 +7,8 @@
 use std::ffi::c_void;
 use std::ptr::null;
 
-use widestring::WideCString;
-use winapi::um::libloaderapi::{GetModuleHandleA, LoadLibraryW};
+use wide_literals::w;
+use winapi::um::libloaderapi::{GetModuleHandleW, LoadLibraryW};
 
 use crate::helpers::*;
 use atomic::{Atomic, Ordering};
@@ -17,7 +17,7 @@ pub fn hook_skse_loader() {
     // Get the pointer to the IAT entry for __telemetry_main_invoke_trigger.
     let addr = unsafe {
         get_iat_addr(
-            GetModuleHandleA(null()),
+            GetModuleHandleW(null()),
             "VCRUNTIME140.dll",
             "__telemetry_main_invoke_trigger",
         )
@@ -60,8 +60,8 @@ fn load_skse() {
     }
     // Very simple, just call LoadLibrary and let the SKSE DLL do all the work to patch the game!
     // TODO: Get the actual game path and identify the game version and construct DLL path properly.
-    let skse_dll_path = WideCString::from_str("skse64_1_5_73.dll").unwrap();
-    let result = unsafe { LoadLibraryW(skse_dll_path.as_ptr()) };
+    let skse_dll_path = w!("skse64_1_5_73.dll");
+    let result = unsafe { LoadLibraryW(skse_dll_path) };
     if result.is_null() {
         panic!("Failed to load SKSE! Terminating!");
     }

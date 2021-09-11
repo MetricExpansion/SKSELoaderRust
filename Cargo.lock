@@ -336,6 +336,7 @@ version = "0.1.0"
 dependencies = [
  "atomic",
  "detour",
+ "wide-literals",
  "widestring",
  "winapi 0.3.9",
 ]
@@ -348,6 +349,7 @@ dependencies = [
  "log",
  "simple_logger",
  "structopt",
+ "wide-literals",
  "widestring",
  "winapi 0.3.9",
 ]
@@ -476,6 +478,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 name = "victim"
 version = "0.1.0"
 dependencies = [
+ "wide-literals",
  "widestring",
  "winapi 0.3.9",
 ]
@@ -485,6 +488,15 @@ name = "wasi"
 version = "0.10.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
+
+[[package]]
+name = "wide-literals"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7064d0ca4b08cb9fad2633dd8a4c8575b87815f1261b9a3ea295486bdc2106e3"
+dependencies = [
+ "syn 1.0.76",
+]
 
 [[package]]
 name = "widestring"
