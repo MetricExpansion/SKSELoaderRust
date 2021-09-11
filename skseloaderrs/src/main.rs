@@ -42,7 +42,10 @@ fn main() {
     simple_logger::SimpleLogger::new().init().unwrap();
     // Check the paths
     if !opt.executable.exists() {
-        warn!("The executable path {} may not exist.", opt.executable.to_string_lossy());
+        warn!(
+            "The executable path {} may not exist.",
+            opt.executable.to_string_lossy()
+        );
     }
     if !opt.dll.exists() {
         warn!("The DLL path {} may not exist.", opt.dll.to_string_lossy());
@@ -50,7 +53,11 @@ fn main() {
 
     // Convert the executable to UCS-2 string and DLL path to ASCII string.
     let exe = WideCString::from_os_str(opt.executable.as_os_str()).unwrap();
-    let dll_path = opt.dll.into_os_string().into_string().expect("Could not convert DLL path to ASCII!");
+    let dll_path = opt
+        .dll
+        .into_os_string()
+        .into_string()
+        .expect("Could not convert DLL path to ASCII!");
 
     // Other parameters
     let sync = !opt.no_sync;
