@@ -1,12 +1,15 @@
 use helpers::quick_msg_box;
-use winapi::um::processthreadsapi::ExitProcess;
+use winapi::{
+    shared::minwindef::{DWORD, HINSTANCE, LPVOID},
+    um::{libloaderapi::DisableThreadLibraryCalls, processthreadsapi::ExitProcess},
+};
 
 mod antidebugger;
 mod helpers;
 mod skse_load;
 
 /// The actual main function.
-fn main(_base: winapi::shared::minwindef::LPVOID) {
+fn main(_base: LPVOID) {
     // helpers::quick_msg_box("Hello from Rust!");
     antidebugger::hook_thread_info();
     skse_load::hook_skse_loader();
@@ -17,15 +20,15 @@ fn main(_base: winapi::shared::minwindef::LPVOID) {
 /// See [Reference](https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html)
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
-    hinst_dll: winapi::shared::minwindef::HINSTANCE,
-    fdw_reason: winapi::shared::minwindef::DWORD,
-    _lpv_reserved: winapi::shared::minwindef::LPVOID,
+    hinst_dll: HINSTANCE,
+    fdw_reason: DWORD,
+    _lpv_reserved: LPVOID,
 ) -> i32 {
     match fdw_reason {
         winapi::um::winnt::DLL_PROCESS_ATTACH => {
             unsafe {
-                // We don't about messages besides DLL_PROCESS_ATTACH. Disable them.
-                winapi::um::libloaderapi::DisableThreadLibraryCalls(hinst_dll);
+                // We care don't about messages besides DLL_PROCESS_ATTACH. Disable them.
+                DisableThreadLibraryCalls(hinst_dll);
             }
             // Register a panic handler to kill the game if we have any issues.
             std::panic::set_hook(Box::new(|info| {
@@ -44,5 +47,3 @@ pub extern "stdcall" fn DllMain(
         _ => true as i32,
     }
 }
-
-// Helper functions

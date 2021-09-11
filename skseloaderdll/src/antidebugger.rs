@@ -66,6 +66,7 @@ pub fn hook_thread_info() {
             .store(std::mem::transmute(h.trampoline()), Ordering::SeqCst);
         h.enable()
             .expect("Failed to enable trampoline! Terminating!");
+        // Intentionally leak the detour so that it stays alive.
         std::mem::forget(h);
     }
 }
