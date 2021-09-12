@@ -7,11 +7,11 @@
 use std::ffi::c_void;
 use std::ptr::null;
 
-use wide_literals::w;
 use winapi::um::libloaderapi::{GetModuleHandleW, LoadLibraryW};
 
 use crate::helpers::*;
 use atomic::{Atomic, Ordering};
+use widestring::WideCString;
 
 pub fn hook_skse_loader() {
     // Get the pointer to the IAT entry for __telemetry_main_invoke_trigger.
@@ -60,8 +60,14 @@ fn load_skse() {
     }
     // Very simple, just call LoadLibrary and let the SKSE DLL do all the work to patch the game!
     // TODO: Get the actual game path and identify the game version and construct DLL path properly.
-    let skse_dll_path = w!("skse64_1_5_73.dll");
-    let result = unsafe { LoadLibraryW(skse_dll_path) };
+    let skyrim_version =
+        identify_skyrim_version().expect("Could not get Skyrim version information! Terminating!");
+    let skse_path = WideCString::from_str(&format!(
+        "skse64_{}_{}_{}.dll",
+        skyrim_version.major, skyrim_version.minor, skyrim_version.patch
+    ))
+    .unwrap();
+    let result = unsafe { LoadLibraryW(skse_path.as_ptr()) };
     if result.is_null() {
         panic!("Failed to load SKSE! Terminating!");
     }

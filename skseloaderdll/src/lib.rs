@@ -11,9 +11,10 @@ mod skse_load;
 /// The actual main function.
 fn main(_base: LPVOID) {
     // helpers::quick_msg_box("Hello from Rust!");
+    helpers::identify_skyrim_version();
     antidebugger::hook_thread_info();
     skse_load::hook_skse_loader();
-    quick_msg_box("Load complete!");
+    // quick_msg_box("Load complete!");
 }
 
 /// DLL entry point. On initial process attach, sets up the panic handler and calls [main].

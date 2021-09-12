@@ -4,17 +4,20 @@ use std::error::Error;
 use std::ffi::{c_void, CStr, CString};
 use std::intrinsics::copy_nonoverlapping;
 use std::os::raw::c_char;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 
-use widestring::WideCString;
-use winapi::shared::minwindef::HMODULE;
+use scan_fmt::scan_fmt;
+use wide_literals::w;
+use widestring::{WideCStr, WideCString, WideChar};
+use winapi::shared::minwindef::{DWORD, HMODULE, MAX_PATH};
+use winapi::um::libloaderapi::{GetModuleFileNameW, GetModuleHandleW};
 use winapi::um::memoryapi::VirtualProtect;
 use winapi::um::winnt::{
     IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_DOS_HEADER, IMAGE_IMPORT_BY_NAME, IMAGE_IMPORT_DESCRIPTOR,
     IMAGE_NT_HEADERS, IMAGE_SNAP_BY_ORDINAL, IMAGE_THUNK_DATA, PAGE_EXECUTE_READWRITE,
 };
 use winapi::um::winuser::{MessageBoxW, MB_OK};
-use wide_literals::w;
+use winapi::um::winver::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW};
 
 /// Searches the IAT for imported functions in a specified DLL.
 pub unsafe fn get_iat_addr(
@@ -80,4 +83,72 @@ pub unsafe fn write_protected_buffer(addr: *mut c_void, data: *const c_void, len
     );
     copy_nonoverlapping(data, addr, length);
     VirtualProtect(addr, length, old_protect, (&mut old_protect) as _);
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct SkyrimVersionInfo {
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+}
+
+pub fn identify_skyrim_version() -> Option<SkyrimVersionInfo> {
+    // let exe_name = unsafe { get_file_version_string(&WideCString::from_str("\\StringFileInfo\\040904B0\\ProductName").unwrap()) }?.to_string_lossy();
+    let version_number = unsafe {
+        get_file_version_string(
+            &WideCString::from_str("\\StringFileInfo\\040904B0\\ProductVersion").unwrap(),
+        )
+    }?
+    .to_string_lossy();
+    let (major, minor, patch, _) =
+        scan_fmt!(&version_number, "{}.{}.{}.{}", u32, u32, u32, u32).ok()?;
+    Some(SkyrimVersionInfo {
+        major,
+        minor,
+        patch,
+    })
+}
+
+unsafe fn get_file_version_string(info_item: &WideCStr) -> Option<WideCString> {
+    let exe_path = {
+        let mut buffer = vec![0; MAX_PATH];
+        if GetModuleFileNameW(
+            GetModuleHandleW(null()),
+            buffer.as_mut_ptr(),
+            buffer.len() as DWORD,
+        ) == 0
+        {
+            return None;
+        };
+        WideCString::from_vec_with_nul_unchecked(buffer)
+    };
+    let version_info = {
+        let mut size = 0;
+        let size = GetFileVersionInfoSizeW(exe_path.as_ptr(), &mut size);
+        let mut buffer = vec![0 as c_char; size as usize];
+        if GetFileVersionInfoW(
+            exe_path.as_ptr(),
+            0,
+            buffer.len() as DWORD,
+            buffer.as_mut_ptr() as *mut c_void,
+        ) == 0
+        {
+            return None;
+        };
+        let mut ptr: *mut c_void = null_mut();
+        let mut size = 0;
+        if VerQueryValueW(
+            buffer.as_ptr() as *const c_void,
+            info_item.as_ptr(),
+            &mut ptr,
+            &mut size,
+        ) == 0
+            || ptr.is_null()
+        {
+            return None;
+        };
+        let ptr_to_string = ptr as *const WideChar;
+        WideCString::from_ptr_with_nul_unchecked(ptr_to_string, size as usize)
+    };
+    Some(version_info)
 }
