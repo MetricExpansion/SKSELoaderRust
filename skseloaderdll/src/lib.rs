@@ -43,8 +43,8 @@ pub extern "stdcall" fn DllMain(
                 };
                 // If we got a string payload, then print the reason.
                 match str {
-                    Some(message) => quick_msg_box(&format!("PANIC!: {}", message)),
-                    None => quick_msg_box(&format!("PANIC! Unknown reason.")),
+                    Some(message) => quick_msg_box(&format!("PANIC: {}", message)),
+                    None => quick_msg_box(&format!("PANIC: Unknown reason.")),
                 }
                 unsafe {
                     ExitProcess(42);

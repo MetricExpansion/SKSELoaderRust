@@ -66,7 +66,7 @@ pub unsafe fn get_iat_addr(
 /// A helper function to quickly show a message box. Panics if `msg` cannot be converted to a [CString].
 pub fn quick_msg_box(msg: &str) {
     let message = WideCString::from_str(msg).unwrap_or_default();
-    let title = w!("Message from Rust");
+    let title = w!("SKSE Loader");
     unsafe {
         MessageBoxW(null_mut(), message.as_ptr(), title, MB_OK);
     }
