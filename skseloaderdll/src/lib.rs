@@ -33,7 +33,16 @@ pub extern "stdcall" fn DllMain(
             }
             // Register a panic handler to kill the game if we have any issues.
             std::panic::set_hook(Box::new(|info| {
-                match info.payload().downcast_ref::<&str>() {
+                // The payload may either downcast to a &str or String. Try to get both then pick one.
+                let string = info.payload().downcast_ref::<String>();
+                let str = info.payload().downcast_ref::<&str>();
+                let str = match (string, str) {
+                    (Some(str), _) => Some(str.as_str()),
+                    (_, Some(str)) => Some(*str),
+                    (None, None) => None,
+                };
+                // If we got a string payload, then print the reason.
+                match str {
                     Some(message) => quick_msg_box(&format!("PANIC!: {}", message)),
                     None => quick_msg_box(&format!("PANIC! Unknown reason.")),
                 }

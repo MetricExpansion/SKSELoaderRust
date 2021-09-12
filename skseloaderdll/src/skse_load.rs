@@ -21,7 +21,7 @@ pub fn hook_skse_loader() {
             "VCRUNTIME140.dll",
             "__telemetry_main_invoke_trigger",
         )
-        .expect("Error {} when finding __telemetry_main_invoke_trigger! Terminating!")
+        .expect("Error when finding __telemetry_main_invoke_trigger! Terminating!")
         .expect("Did not find __telemetry_main_invoke_trigger! Terminating!")
     };
     unsafe {
