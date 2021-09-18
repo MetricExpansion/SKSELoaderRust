@@ -94,8 +94,9 @@ pub struct SkyrimVersionInfo {
 
 pub fn identify_skyrim_version() -> Option<SkyrimVersionInfo> {
     // let exe_name = unsafe { get_file_version_string(&WideCString::from_str("\\StringFileInfo\\040904B0\\ProductName").unwrap()) }?.to_string_lossy();
+    let version_info = FileVersionInfo::for_current_module()?;
     let version_number = unsafe {
-        get_file_version_string(
+        version_info.get_info_item_string(
             &WideCString::from_str("\\StringFileInfo\\040904B0\\ProductVersion").unwrap(),
         )
     }?
@@ -109,36 +110,49 @@ pub fn identify_skyrim_version() -> Option<SkyrimVersionInfo> {
     })
 }
 
-unsafe fn get_file_version_string(info_item: &WideCStr) -> Option<WideCString> {
-    let exe_path = {
-        let mut buffer = vec![0; MAX_PATH];
-        if GetModuleFileNameW(
-            GetModuleHandleW(null()),
-            buffer.as_mut_ptr(),
-            buffer.len() as DWORD,
-        ) == 0
-        {
-            return None;
+struct FileVersionInfo {
+    buffer: Vec<c_char>,
+}
+
+impl FileVersionInfo {
+    fn for_current_module() -> Option<FileVersionInfo> {
+        let exe_path = unsafe {
+            let mut buffer = vec![0; MAX_PATH];
+            if GetModuleFileNameW(
+                GetModuleHandleW(null()),
+                buffer.as_mut_ptr(),
+                buffer.len() as DWORD,
+            ) == 0
+            {
+                return None;
+            };
+            WideCString::from_vec_with_nul_unchecked(buffer)
         };
-        WideCString::from_vec_with_nul_unchecked(buffer)
-    };
-    let version_info = {
-        let mut size = 0;
-        let size = GetFileVersionInfoSizeW(exe_path.as_ptr(), &mut size);
-        let mut buffer = vec![0 as c_char; size as usize];
-        if GetFileVersionInfoW(
-            exe_path.as_ptr(),
-            0,
-            buffer.len() as DWORD,
-            buffer.as_mut_ptr() as *mut c_void,
-        ) == 0
-        {
-            return None;
+        let version_info = unsafe {
+            let mut size = 0;
+            let size = GetFileVersionInfoSizeW(exe_path.as_ptr(), &mut size);
+            let mut buffer = vec![0 as c_char; size as usize];
+            if GetFileVersionInfoW(
+                exe_path.as_ptr(),
+                0,
+                buffer.len() as DWORD,
+                buffer.as_mut_ptr() as *mut c_void,
+            ) == 0
+            {
+                return None;
+            };
+            buffer
         };
+        Some(FileVersionInfo {
+            buffer: version_info,
+        })
+    }
+
+    unsafe fn get_info_item_string(&self, info_item: &WideCStr) -> Option<WideCString> {
         let mut ptr: *mut c_void = null_mut();
         let mut size = 0;
         if VerQueryValueW(
-            buffer.as_ptr() as *const c_void,
+            self.buffer.as_ptr() as *const c_void,
             info_item.as_ptr(),
             &mut ptr,
             &mut size,
@@ -148,7 +162,6 @@ unsafe fn get_file_version_string(info_item: &WideCStr) -> Option<WideCString> {
             return None;
         };
         let ptr_to_string = ptr as *const WideChar;
-        WideCString::from_ptr_with_nul_unchecked(ptr_to_string, size as usize)
-    };
-    Some(version_info)
+        Some(WideCString::from_ptr_with_nul_unchecked(ptr_to_string, size as usize))
+    }
 }
