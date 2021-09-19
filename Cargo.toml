@@ -5,3 +5,6 @@ members = [
     "skseloaderdll",
     "victim",
 ]
+
+[profile.release]
+lto = true
