@@ -17,18 +17,12 @@ use crate::iat::get_iat_iter;
 
 pub fn hook_skse_loader() {
     // Get the pointer to the IAT entry for __telemetry_main_invoke_trigger.
-    let mut addr = None;
-    'outer: for dll in unsafe { get_iat_iter(GetModuleHandleW(null())) } {
-        if dll.dll_name.as_c_str() == c_str!("VCRUNTIME140.dll") {
-            for import in dll {
-                if import.name.as_c_str() == c_str!("__telemetry_main_invoke_trigger") {
-                    addr = Some(import.addr);
-                    break 'outer;
-                }
-            }
-        }
-    }
-    let addr = addr.expect("Did not find __telemetry_main_invoke_trigger! Terminating!");
+    let addr = unsafe { get_iat_iter(GetModuleHandleW(null())) }
+        .find(|dll| dll.dll_name.as_c_str() == c_str!("VCRUNTIME140.dll"))
+        .expect("Could not find VCRUNTIME140.dll in IAT. Terminating!")
+        .find(|import| import.name.as_c_str() == c_str!("__telemetry_main_invoke_trigger"))
+        .map(|entry| entry.addr)
+        .expect("Could not find __telemetry_main_invoke_trigger in IAT! Terminating!");
     unsafe {
         // Stash the function pointer in the IAT into a global variable for later use.
         let addr: *mut TelemFn = std::mem::transmute::<*mut _, _>(addr);
