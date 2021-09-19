@@ -2,7 +2,7 @@
 //! SKSE loading is done by a process called IAT hooking. A function in the MSVC C Runtime will have
 //! its address in the IAT replaced with a function we control. There, we load SKSE and then call
 //! the original function. The function we hook is __telemetry_main_invoke_trigger.
-//! See [Reference](https://www.ired.team/offensive-security/code-injection-process-injection/import-adress-table-iat-hooking).
+//! See [reference](https://www.ired.team/offensive-security/code-injection-process-injection/import-adress-table-iat-hooking).
 
 use std::ffi::c_void;
 use std::ptr::null;
@@ -58,7 +58,6 @@ fn load_skse() {
         return;
     }
     // Very simple, just call LoadLibrary and let the SKSE DLL do all the work to patch the game!
-    // TODO: Get the actual game path and identify the game version and construct DLL path properly.
     let skyrim_version =
         identify_skyrim_version().expect("Could not get Skyrim version information! Terminating!");
     let skse_path = WideCString::from_str(&format!(

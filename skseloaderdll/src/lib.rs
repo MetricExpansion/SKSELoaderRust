@@ -19,7 +19,7 @@ fn main(_base: LPVOID) {
 }
 
 /// DLL entry point. On initial process attach, sets up the panic handler and calls our hooking code.
-/// See [Reference](https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html)
+/// See [reference](https://www.unknowncheats.me/forum/rust-language-/330583-pure-rust-injectable-dll.html).
 #[no_mangle]
 pub extern "stdcall" fn DllMain(
     hinst_dll: HINSTANCE,
