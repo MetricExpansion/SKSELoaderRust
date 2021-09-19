@@ -7,23 +7,28 @@
 use std::ffi::c_void;
 use std::ptr::null;
 
+use atomic::{Atomic, Ordering};
+use c_str_macro::c_str;
+use widestring::WideCString;
 use winapi::um::libloaderapi::{GetModuleHandleW, LoadLibraryW};
 
 use crate::helpers::*;
-use atomic::{Atomic, Ordering};
-use widestring::WideCString;
+use crate::iat::get_iat_iter;
 
 pub fn hook_skse_loader() {
     // Get the pointer to the IAT entry for __telemetry_main_invoke_trigger.
-    let addr = unsafe {
-        get_iat_addr(
-            GetModuleHandleW(null()),
-            "VCRUNTIME140.dll",
-            "__telemetry_main_invoke_trigger",
-        )
-        .expect("Error when finding __telemetry_main_invoke_trigger! Terminating!")
-        .expect("Did not find __telemetry_main_invoke_trigger! Terminating!")
-    };
+    let mut addr = None;
+    'outer: for dll in unsafe { get_iat_iter(GetModuleHandleW(null())) } {
+        if dll.dll_name.as_c_str() == c_str!("VCRUNTIME140.dll") {
+            for import in dll {
+                if import.name.as_c_str() == c_str!("__telemetry_main_invoke_trigger") {
+                    addr = Some(import.addr);
+                    break 'outer;
+                }
+            }
+        }
+    }
+    let addr = addr.expect("Did not find __telemetry_main_invoke_trigger! Terminating!");
     unsafe {
         // Stash the function pointer in the IAT into a global variable for later use.
         let addr: *mut TelemFn = std::mem::transmute::<*mut _, _>(addr);

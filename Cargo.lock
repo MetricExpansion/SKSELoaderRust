@@ -74,6 +74,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "c_str_macro"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6d44951c469019e225e7667d799052f67fb8ea358d086878f3582b39f0de5e5"
+
+[[package]]
 name = "cc"
 version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -376,6 +382,7 @@ name = "skseloaderdll"
 version = "0.1.0"
 dependencies = [
  "atomic",
+ "c_str_macro",
  "detour",
  "scan_fmt",
  "wide-literals",

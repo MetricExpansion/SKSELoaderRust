@@ -6,6 +6,7 @@ use winapi::{
 
 mod antidebugger;
 mod helpers;
+mod iat;
 mod skse_load;
 
 /// The actual main function.
