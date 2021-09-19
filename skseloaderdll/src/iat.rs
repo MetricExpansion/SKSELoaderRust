@@ -91,7 +91,7 @@ pub unsafe fn get_iat_iter(module: HMODULE) -> IatDllIter {
 
 /// Searches the IAT for imported functions in a specified DLL.
 #[deprecated(
-    note = "get_iat_addr is deprecated in favor of iterator form. Use `get_iat_iter` instead."
+    note = "`get_iat_addr` is deprecated in favor of iterator form. Use `get_iat_iter` instead."
 )]
 #[allow(dead_code)]
 pub unsafe fn get_iat_addr(
