@@ -25,6 +25,7 @@ pub fn quick_msg_box(msg: &str) {
 }
 
 /// A helper function similar to [copy_nonoverlapping] (in fact, wrapping that function), which allows writing to executable pages.
+/// `unsafe` because you can modify arbitary memory.
 pub unsafe fn write_protected_buffer(addr: *mut c_void, data: *const c_void, length: usize) {
     let mut old_protect = 0;
     VirtualProtect(
@@ -37,6 +38,7 @@ pub unsafe fn write_protected_buffer(addr: *mut c_void, data: *const c_void, len
     VirtualProtect(addr, length, old_protect, (&mut old_protect) as _);
 }
 
+/// Information about the major, minor, and patch level of a Skyrim SE runtime.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct SkyrimVersionInfo {
     pub major: u32,
@@ -44,6 +46,7 @@ pub struct SkyrimVersionInfo {
     pub patch: u32,
 }
 
+/// Assuming you are running in Skyrim SE, get the version information for the game runtime.
 pub fn identify_skyrim_version() -> Option<SkyrimVersionInfo> {
     // let exe_name = unsafe { get_file_version_string(&WideCString::from_str("\\StringFileInfo\\040904B0\\ProductName").unwrap()) }?.to_string_lossy();
     let version_info = FileVersionInfo::for_current_module()?;
@@ -62,11 +65,14 @@ pub fn identify_skyrim_version() -> Option<SkyrimVersionInfo> {
     })
 }
 
+/// Version information about a module, as would be returned by
+/// [`GetFileVersionInfoW`](https://docs.microsoft.com/en-us/windows/win32/api/winver/nf-winver-getfileversioninfow).
 struct FileVersionInfo {
     buffer: Vec<c_char>,
 }
 
 impl FileVersionInfo {
+    /// Get a new [`FileVersionInfo`] for the main application module.
     fn for_current_module() -> Option<FileVersionInfo> {
         let exe_path = unsafe {
             let mut buffer = vec![0; MAX_PATH];
@@ -100,6 +106,10 @@ impl FileVersionInfo {
         })
     }
 
+    /// Get an info item from the file version info. `unsafe` because the result will be unconditionally
+    /// converted to a [`WideCString`]. If it is not a string, then arbitrary memory read may occur. It is up to you
+    /// to make sure you're requesting a key which is a string. See documentation for
+    /// [`VerQueryValueW`](https://docs.microsoft.com/en-us/windows/win32/api/winver/nf-winver-verqueryvaluew).
     unsafe fn get_info_item_string(&self, info_item: &WideCStr) -> Option<WideCString> {
         let mut ptr: *mut c_void = null_mut();
         let mut size = 0;

@@ -1,6 +1,7 @@
 //! # Anti-debugger disable
-//! The game prevents debugging by calling a kernel function `ZwSetInformationThread` that will
-//! tell Windows that it's not OK to debug it. We will patch this function so that we can screen
+//! The game prevents debugging by calling a kernel function
+//! [`ZwSetInformationThread`](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-zwsetinformationthread)
+//! that will tell Windows that it's not OK to debug it. We will patch this function so that we can screen
 //! out the calls that specifically set that flag.
 
 use std::ffi::CString;
@@ -14,11 +15,18 @@ use winapi::shared::ntdef::ULONG;
 use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress};
 use winapi::um::winnt::{HANDLE, PVOID};
 
+/// Signature of
+/// [`ZwSetInformationThread`](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-zwsetinformationthread).
 type ThreadInfoFn = unsafe extern "stdcall" fn(HANDLE, ULONG, PVOID, ULONG) -> BOOL;
 
+/// The location where we store a pointer to the real
+/// [`ZwSetInformationThread`](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-zwsetinformationthread)
+/// so that we can call it from our shim. Starts off as [`None`]. [`Atomic`] for thread-safe access.
 static ZW_SET_INFORMATION_THREAD_ORIGINAL: Atomic<Option<ThreadInfoFn>> = Atomic::new(None);
 
-/// Our replacement for `ZwSetInformationThread` that will filter out calls that set the anti-debug flag.
+/// Our replacement for
+/// [`ZwSetInformationThread`](https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/nf-ntddk-zwsetinformationthread)
+/// that will filter out calls that set the anti-debug flag.
 unsafe extern "stdcall" fn zw_set_information_thread_detour(
     thread_handle: HANDLE,
     thread_information_class: ULONG,

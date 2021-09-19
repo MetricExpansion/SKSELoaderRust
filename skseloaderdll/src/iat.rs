@@ -10,13 +10,17 @@ use winapi::um::winnt::{
     IMAGE_NT_HEADERS, IMAGE_SNAP_BY_ORDINAL, IMAGE_THUNK_DATA,
 };
 
+/// [`Iterator`] for [`IatDll`]s, which represent imported DLLs in the IAT.
 pub struct IatDllIter {
     base: usize,
     import_table: *const IMAGE_IMPORT_DESCRIPTOR,
 }
 
+/// [`Iterator`] for [`IatDllImport`] for a particular DLL in the IAT, which represents the
+/// imported symbols from that DLL.
 pub struct IatDll {
     base: usize,
+    /// The name of the imported DLL.
     pub dll_name: CString,
     thunk_data: *const IMAGE_THUNK_DATA,
     iat: *const usize,
@@ -46,8 +50,11 @@ impl Iterator for IatDll {
     }
 }
 
+/// A record of a given imported symbol in the IAT.
 pub struct IatDllImport {
+    /// The name of the imported symbol.
     pub name: CString,
+    /// The address of the IAT entry. `*(*addr as *mut T)` would allow you to resolve that symbol.
     pub addr: *mut (),
 }
 
