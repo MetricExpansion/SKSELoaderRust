@@ -15,7 +15,8 @@ use winapi::um::winnt::PAGE_EXECUTE_READWRITE;
 use winapi::um::winuser::{MessageBoxW, MB_OK};
 use winapi::um::winver::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW};
 
-/// A helper function to quickly show a message box. Panics if `msg` cannot be converted to a [CString].
+/// A helper function to quickly show a message box. Panics if `msg` cannot be converted to a [`WideCString`]
+/// (likely, because it contains NULL bytes inside of it.
 pub fn quick_msg_box(msg: &str) {
     let message = WideCString::from_str(msg).unwrap_or_default();
     let title = w!("SKSE Loader");
