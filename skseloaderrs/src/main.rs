@@ -221,9 +221,9 @@ impl HandleWrapper {
     }
 }
 
-impl Into<HANDLE> for HandleWrapper {
-    fn into(self) -> HANDLE {
-        self.handle
+impl From<HandleWrapper> for HANDLE {
+    fn from(handle_wrapper: HandleWrapper) -> Self {
+        handle_wrapper.handle
     }
 }
 
