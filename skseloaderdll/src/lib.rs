@@ -45,7 +45,7 @@ pub extern "stdcall" fn DllMain(
                 // If we got a string payload, then print the reason.
                 match str {
                     Some(message) => quick_msg_box(&format!("PANIC: {}", message)),
-                    None => quick_msg_box(&format!("PANIC: Unknown reason.")),
+                    None => quick_msg_box(&"PANIC: Unknown reason.".to_string()),
                 }
                 unsafe {
                     ExitProcess(42);
@@ -53,7 +53,7 @@ pub extern "stdcall" fn DllMain(
             }));
             // Call our main!
             main(hinst_dll as _);
-            return true as i32;
+            true as i32
         }
         _ => true as i32,
     }

@@ -38,14 +38,14 @@ unsafe extern "stdcall" fn zw_set_information_thread_detour(
         return TRUE;
     }
     // Use the trampoline to call the original function.
-    return ZW_SET_INFORMATION_THREAD_ORIGINAL
+    ZW_SET_INFORMATION_THREAD_ORIGINAL
         .load(Ordering::SeqCst)
         .expect("ZW_SET_INFORMATION_THREAD_DETOUR_ORIGINAL was None! Exiting...")(
         thread_handle,
         thread_information_class,
         thread_information,
         thread_information_length,
-    );
+    )
 }
 
 /// The main function here that will perform the hooking.
